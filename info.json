@@ -1,0 +1,11 @@
+{
+  "name": "plc",
+  "version": "0.1.0",
+  "title": "Programmable Logic Controller Unit",
+  "author": "SereneRebel",
+  "contact": "bidspec@gmail.com",
+  "homepage": "",
+  "factorio_version": "0.16",
+  "dependencies": ["base >= 0.16"],
+  "description": "Manipulate your signals just like a PLC"
+}
