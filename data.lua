@@ -17,7 +17,26 @@ data:extend{
     {
         type = "custom-input",
         name = "open-plc",
-        key_sequence = "Left mouse button",
+        key_sequence = "mouse-button-1",
         consuming = "script-only"
     }
 }
+data:extend{
+    {
+        type = "custom-input",
+        name = "close-plc",
+        key_sequence = "",
+		linked_game_control = "close-gui",
+        consuming = "none"
+    }
+}
+data:extend{
+    {
+        type = "custom-input",
+        name = "close-plc2",
+        key_sequence = "",
+		linked_game_control = "toggle-menu",
+        consuming = "none"
+    }
+}
+

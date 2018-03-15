@@ -200,7 +200,7 @@ local function onBuiltEntity(event)
 	end 
 	if entity.name == "entity-ghost" and entity.ghost_name == "plc-unit" then
 		-- add ghost to list for future handling
-		global.structures.ghosts[entity.unit_number] = { 
+		global.ghosts[entity.unit_number] = { 
 			struct_type = _, 
 			entity = entity, 
 			position = {x = entity.position.x, y = entity.position.y}, 

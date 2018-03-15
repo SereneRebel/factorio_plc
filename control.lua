@@ -253,6 +253,7 @@ function drawGUI(player, player_index, structure)
 	elseif gui.currentTab == "save" then
 		savePage(gui, structure)
 	end
+	player.opened = gui.main
 end
 
 
@@ -429,8 +430,22 @@ local function onCustomInput(event)
 	if player.selected and player.selected.name == "plc-unit" then
 		local structure = getStructureForEntity(player.selected)
 		drawGUI(player, event.player_index, getStructureForEntity(player.selected))
+		global.gui.open = true
 	end
 end
+
+local function onCloseGui(event) 
+	local player = game.players[event.player_index]
+	if event.gui_type == defines.gui_type.custom then
+		if global.gui.open and global.gui[event.player_index].main == event.element then
+			hideGUI(player, event.player_index)
+			global.gui.open = false
+			player.opened = nil
+		end
+	end
+end
+
+
 script.on_event(defines.events.on_gui_click, onClick)
 script.on_event(defines.events.on_gui_text_changed, onGuiChanged)
 script.on_event(defines.events.on_gui_elem_changed, onGuiChanged)
@@ -438,5 +453,8 @@ script.on_event(defines.events.on_gui_selection_state_changed, onGuiChanged)
 
 
 script.on_event("open-plc", onCustomInput)
+
+script.on_event(defines.events.on_gui_closed, onCloseGui)
 script.on_event(defines.events.on_tick, onTick)
 script.on_init(onInit)
+
