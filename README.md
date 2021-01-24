@@ -1,3 +1,5 @@
+note: Not really maintained feel free to fork/update/edit.
+
 # plc
 Factorio mod Programmable Logic Controller
 
