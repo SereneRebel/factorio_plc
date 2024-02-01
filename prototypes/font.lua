@@ -18,9 +18,12 @@ data:extend(
     from = "default-bold",
     size = 16
   },
-  
-  
-  
+  {
+    type = "font",
+    name = "plc-unit-invisible-font",
+    from = "default",
+    size = 0,
+  },
   {
     type = "font",
     name = "plc_font_small",

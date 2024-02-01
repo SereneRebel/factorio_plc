@@ -1,8 +1,8 @@
 data:extend({
   {
     type = "technology",
-    name = "plc",
-    icon = "__plc__/graphics/icon/plc.png",
+    name = "signal-controller",
+    icon = "__SignalController__/graphics/icon/plc.png",
     icon_size = 128,
     effects = {
       {
@@ -15,8 +15,8 @@ data:extend({
     {
       count = 200,
       ingredients = {
-        {"science-pack-1", 1},
-        {"science-pack-2", 1}
+        {"automation-science-pack", 1},
+        {"logistic-science-pack", 1}
       },
       time = 15
     },

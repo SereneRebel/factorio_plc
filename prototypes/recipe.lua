@@ -14,16 +14,15 @@ data:extend({
 	},
 	{
 		type = "recipe-category",
-		name = "plc-power",
+		name = "plc-unit",
 	},
 	{
 		type = "recipe",
-		name = "plc-power",
-		enabled = false,
+		name = "plc-unit-power",
 		hidden = true,
 		ingredients = {},
-		results = { { name = "plc-power", amount = 0, probability = 0 } },
-		main_product = "plc-power",
-		category = "plc-power",
+		results = { { name = "plc-unit", amount = 0, probability = 0 } },
+		main_product = "plc-unit",
+		category = "plc-unit",
 	},
 })

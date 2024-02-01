@@ -1,4 +1,12 @@
 -- file dedicated to the inner workings of the PLC
+require "intellisense"
+
+local M = {}
+local ifBlock = {
+	level = 0,
+	executing = {},
+	dead = {}
+}
 
 local function isVariable(str)
 	if str and string.match(str, "^(%a+)") then
@@ -14,184 +22,204 @@ local function isConst(str)
 		return false
 	end
 end
-local function getParams(structure, command, count)
-	local p = {}
-	if command.params then
-		for ind = 1, count do
-			if isVariable(command.params[ind]) then
-				p[ind] = structure.data.variables[command.params[ind]] or 0
-			elseif isConst(command.params[ind]) then
-				p[ind] = tonumber(command.params[ind])
-			else
-				return nil
-			end
-		end
+local function check_param(structure, parameter)
+	if isVariable(parameter) then
+		return true, structure.data.variables[parameter] or 0
+	elseif isConst(parameter) then
+		return true, tonumber(parameter)
 	else
-		return nil
+		return false, nil
 	end
-	return p
+end
+local function check_triplet(structure, command)
+	local good, p1, p2
+	good, p1 = check_param(structure, command.parameter1)
+	if not good then
+		return false, nil, nil
+	end
+	good, p2 = check_param(structure, command.parameter2)
+	if not good then
+		return false, nil, nil
+	end
+	if not isVariable(command.parameter3) then
+		return false, nil, nil
+	end
+	return true, p1, p2
+end
+local function check_tuple(structure, command)
+	local good, p1
+	good, p1 = check_param(structure, command.parameter1)
+	if not good then
+		return false, nil
+	end
+	if not isVariable(command.parameter2) then
+		return false, nil
+	end
+	return true, p1
+end
+local function check_single(structure, command)
+	local good
+	good, p1 = check_param(structure, command.parameter1)
+	if not good then
+		return false, nil
+	end
+	return true, p1
 end
 local function noop(structure, command)
-	
+
 end
 local function n_eq(structure, command)
 	-- param3 = (param1 == param2)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if params[1] == params[2] then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if p1 == p2 then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function n_gt(structure, command)
 	-- param3 = (param1 > param2)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if params[1] > params[2] then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if p1 > p2 then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function n_gte(structure, command)
 	-- param3 = (param1 >= param2)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if params[1] >= params[2] then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if p1 >= p2 then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function n_lt(structure, command)
 	-- param3 = (param1 < param2)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if params[1] < params[2] then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if p1 < p2 then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function n_lte(structure, command)
 	-- param3 = (param1 == param2)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if params[1] <= params[2] then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if p1 <= p1 then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function l_and(structure, command)
 	-- param3 = (param1>0 and param2>0)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if (params[1] > 0) and (params[2] > 0) then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if (p1 > 0) and (p2 > 0) then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function l_or(structure, command)
 	-- param3 = (param1>0 or param2>0)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if (params[1] > 0) or (params[2] > 0) then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if (p1 > 0) or (p2 > 0) then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function l_not(structure, command)
 	-- param3 = not (param1>0)
-	local params = getParams(structure, command, 1)
-	if not params then return end
-	if not isVariable(command.params[2]) then return end
-	if not (params[1] > 0) then
-		structure.data.variables[command.params[2]] = 1
-	else
-		structure.data.variables[command.params[2]] = 0
+	local good, p1 = check_tuple(structure, command)
+	if good then
+		if not (p1 > 0) then
+			structure.data.variables[command.parameter2] = 1
+		else
+			structure.data.variables[command.parameter2] = 0
+		end
 	end
 end
 local function l_xor(structure, command)
 	-- param3 = (param1>0 and param2>0)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if ((params[1] > 0) and not (params[2] > 0)) or (not (params[1] > 0) and (params[2] > 0)) then
-		structure.data.variables[command.params[3]] = 1
-	else
-		structure.data.variables[command.params[3]] = 0
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if ((p1 > 0) and not (p2 > 0)) or (not (p1 > 0) and (p2 > 0)) then
+			structure.data.variables[command.parameter3] = 1
+		else
+			structure.data.variables[command.parameter3] = 0
+		end
 	end
 end
 local function n_add(structure, command)
 	-- param3 = (param1>0 and param2>0)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	structure.data.variables[command.params[3]] = params[1] + params[2]
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		structure.data.variables[command.parameter3] = p1 + p2
+	end
 end
 local function n_sub(structure, command)
 	-- param3 = (param1>0 and param2>0)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	structure.data.variables[command.params[3]] = params[1] - params[2]
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		structure.data.variables[command.parameter3] = p1 - p2
+	end
 end
 local function n_mul(structure, command)
 	-- param3 = (param1>0 and param2>0)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	structure.data.variables[command.params[3]] = params[1] * params[2]
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		structure.data.variables[command.parameter3] = p1 * p2
+	end
 end
 local function n_div(structure, command)
 	-- param3 = (param1>0 and param2>0)
-	local params = getParams(structure, command, 2)
-	if not params then return end
-	if not isVariable(command.params[3]) then return end
-	if params[2] == 0 then 
-		structure.data.variables[command.params[3]] = 0 
-	else
-		structure.data.variables[command.params[3]] = params[1] / params[2]
-	end
-end
-local ifBlock = {
-	level = 0,
-	executing = {},
-	dead = {}
-}
-
-
-local function p_if(structure, command)
-	-- if (param1>0) then execute the next command otherwise dont
-	local params = getParams(structure, command, 1)
-	if not params then return end
-	local exec, dead = true, false
-	if ifBlock.level == 0 then
-		exec = (params[1] > 0)
-		dead = false
-	else
-		if ifBlock.executing[ifBlock.level] and not ifBlock.dead[ifBlock.level] then
-			exec = (params[1] > 0)
-			dead = false
+	local good, p1, p2 = check_triplet(structure, command)
+	if good then
+		if p2 == 0 then
+			structure.data.variables[command.parameter3] = 0
 		else
-			exec = false
-			dead = true
+			structure.data.variables[command.parameter3] = p1 / p2
 		end
 	end
-	ifBlock.level = ifBlock.level + 1
-	ifBlock.executing[ifBlock.level] = exec
-	ifBlock.dead[ifBlock.level] = dead
+end
+local function p_if(structure, command)
+	-- if (param1>0) then execute the next command otherwise dont
+	local good, p1 = check_single(structure, command)
+	if good then
+		local exec, dead = true, false
+		if ifBlock.level == 0 then
+			exec = (p1 > 0)
+			dead = false
+		else
+			if ifBlock.executing[ifBlock.level] and not ifBlock.dead[ifBlock.level] then
+				exec = (p1 > 0)
+				dead = false
+			else
+				exec = false
+				dead = true
+			end
+		end
+		ifBlock.level = ifBlock.level + 1
+		ifBlock.executing[ifBlock.level] = exec
+		ifBlock.dead[ifBlock.level] = dead
+	end
 end
 local function p_else(structure, command)
 	if ifBlock.level > 0 and not ifBlock.dead[ifBlock.level] then
@@ -209,17 +237,17 @@ local function p_ifend(structure, command)
 end
 local function n_mov(structure, command)
 	-- param2 = param1
-	local params = getParams(structure, command, 1)
-	if not params then return end
-	if not isVariable(command.params[2]) then return end
-		if isVariable(command.params[1]) then
-				structure.data.variables[command.params[2]] = structure.data.variables[command.params[1]]
-		elseif isConst(command.params[1]) then
-				structure.data.variables[command.params[2]] = tonumber(command.params[1])
+	local good, p1 = check_tuple(structure, command)
+	if good then
+		if isVariable(command.parameter1) then
+				structure.data.variables[command.parameter2] = structure.data.variables[command.parameter1]
+		elseif isConst(command.parameter1) then
+				structure.data.variables[command.parameter2] = tonumber(command.parameter1)
 		end
+	end
 end
 
-commandList = {
+M.commandList = {
 	{disp = "NO-OP", 	func = noop , 	params = 0, ov = false},
 	{disp = "EQ" , 		func = n_eq , 	params = 3, ov = false},
 	{disp = "GT" , 		func = n_gt , 	params = 3, ov = false},
@@ -239,19 +267,24 @@ commandList = {
 	{disp = "IF END", 	func = p_ifend, params = 0, ov = true},
 	{disp = "MOVE", 	func = n_mov, 	params = 2, ov = false},
 }
-function tickProgram(structure)
-	for _, command in pairs(structure.program.program) do
-		local cmd = commandList[command.cmd]
+
+---Reads all the signals from incoming curcuit network
+---@param struct structure_table
+function M.tickProgram(struct)
+	for _, command in pairs(struct.program.program_data) do
+		local cmd = M.commandList[command.command]
 		-- we cannot use regular exec = execNext because it would be a reference to the same memory
 		if cmd then
 			-- level 0 is base level so we execute everything
 			if ifBlock.level == 0 then
-				cmd.func(structure, command)
+				cmd.func(struct, command)
 			elseif cmd.ov then 
-				cmd.func(structure, command)
+				cmd.func(struct, command)
 			elseif ifBlock.executing[ifBlock.level] and not ifBlock.dead[ifBlock.level] then
-				cmd.func(structure, command)
+				cmd.func(struct, command)
 			end
 		end
 	end
 end
+
+return M

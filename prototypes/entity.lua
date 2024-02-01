@@ -1,155 +1,121 @@
-local FOLDER = "__plc__"
-local img_blank = { filename = FOLDER.."/graphics/blank.png", priority = "extra-high", width = 1, height = 1, frame_count = 1, shift = {0, 0}, }
-local img_led_output = { filename = "__base__/graphics/entity/combinator/activity-leds/constant-combinator-LED-N.png", width = 11, height = 10, frame_count = 1, shift = {-0.32, 0.20625}, }
-local img_led_input = { filename = "__base__/graphics/entity/combinator/activity-leds/constant-combinator-LED-N.png", width = 11, height = 10, frame_count = 1, shift = {0.296875, -0.40625}, }
-local con_point_output = { shadow = { red = {0.15, 	-0.105}, 	green = {0.15, 	0.11}, }, 
-							wire  = { red = {0.17, 	-0.045}, 	green = {0.17,	0.17}, } }
-local con_point_input = {  shadow = { red = {-0.18, -0.105}, 	green = {-0.18, 0.11}, }, 
-							wire  = { red = {-0.20, -0.045}, 	green = {-0.20, 0.17}, } }
+local FOLDER = "__SignalController__"
+local img_blank = {
+	filename = FOLDER .. "/graphics/blank.png",
+	priority = "extra-high",
+	width = 1,
+	height = 1,
+	frame_count = 1,
+	shift = { 0, 0 },
+}
+local img_led_output = {
+	filename = "__base__/graphics/entity/combinator/activity-leds/constant-combinator-LED-N.png",
+	width = 32,
+	height = 6,
+	frame_count = 1,
+	shift = { -0.32, 0.20625 },
+}
+local img_led_input = {
+	filename = "__base__/graphics/entity/combinator/activity-leds/constant-combinator-LED-N.png",
+	width = 32,
+	height = 6,
+	frame_count = 1,
+	shift = { 0.296875, -0.40625 },
+}
+local con_point_output = {
+	shadow = { red = { 0.15, -0.105 }, green = { 0.15, 0.11 }, },
+	wire = { red = { 0.17, -0.045 }, green = { 0.17, 0.17 }, }
+}
+local con_point_input = {
+	shadow = { red = { -0.18, -0.105 }, green = { -0.18, 0.11 }, },
+	wire = { red = { -0.20, -0.045 }, green = { -0.20, 0.17 }, }
+}
 
-data:extend({
-    {
-        type = "item",
-        name = "plc-unit",
-        icon = FOLDER.."/graphics/icon/plc.png",
-        icon_size = 128,
-        flags = {"goes-to-quickbar"},
-        subgroup = "plc",
-        order = "b",
-        stack_size = 50,
-        place_result = "plc-unit",
-    },
-    {
-        type = "item",
-        name = "plc-input",
-        icon = FOLDER.."/graphics/icon/plc.png",
-        icon_size = 128,
-        flags = {"goes-to-quickbar", "hidden"},
-        subgroup = "plc",
-        order = "z[plc]",
-        stack_size = 50,
-        place_result = "plc-input",
-    },
-    {
-        type = "item",
-        name = "plc-output",
-        icon = FOLDER.."/graphics/icon/plc.png",
-        icon_size = 128,
-        flags = {"goes-to-quickbar", "hidden"},
-        subgroup = "plc",
-        order = "z[plc]",
-        stack_size = 50,
-        place_result = "plc-output",
-    },
-    {
-        type = "item",
-        name = "plc-power",
-        icon = FOLDER.."/graphics/icon/plc.png",
-        icon_size = 128,
-        flags = {"goes-to-quickbar", "hidden"},
-        subgroup = "plc",
-        order = "z[plc]",
-        stack_size = 50,
-        place_result = "plc-power",
-    },
-	{
-        type = "constant-combinator",
-        name = "plc-output",
-        icon = FOLDER.."/graphics/icon/plc.png",
-        icon_size = 128,
-        flags = {"placeable-player", "player-creation", "placeable-off-grid", "not-deconstructable", "not-repairable"},
-        mineable = nil,
-        fast_replaceable_group = "plc-output",
-        order = "y",
-        max_health = 10000,
-        healing_per_tick = 10000,
-        corpse = "small-remnants",
-        collision_box = {{-0.0, -0.0}, {0.0, 0.0}},
-        collision_mask = {"not-colliding-with-itself"},
-        selection_box = {{-0.4, -0.4}, {0.4, 0.4}},
-        item_slot_count = 1000,
-        sprites = { north = img_blank, east = img_blank, south = img_blank, west = img_blank },
-        activity_led_sprites = { north = img_led_output, east = img_led_output, south = img_led_output, west = img_led_output },
-        activity_led_light = { intensity = 0.8, size = 1, },
-        activity_led_light_offsets = { {0, 0}, {0, 0}, {0, 0}, {0, 0} },
-        circuit_wire_connection_points = { con_point_output, con_point_output, con_point_output, con_point_output},
-        circuit_wire_max_distance = 10
-    }, 
-	{
-        type = "constant-combinator",
-        name = "plc-input",
-        icon = FOLDER.."/graphics/icon/plc.png",
-        icon_size = 128,
-        flags = {"placeable-player", "player-creation", "placeable-off-grid", "not-deconstructable", "not-repairable"},
-        mineable = nil,
-        fast_replaceable_group = "plc-input",
-        order = "y",
-        max_health = 10000,
-        healing_per_tick = 10000,
-        corpse = "small-remnants",
-        collision_box = {{-0.0, -0.0}, {0.0, 0.0}},
-        collision_mask = {"not-colliding-with-itself"},
-        selection_box = {{-0.4, -0.4}, {0.4, 0.4}},
-        item_slot_count = 0,
-        sprites = { north = img_blank, east = img_blank, south = img_blank, west = img_blank },
-        activity_led_sprites = { north = img_led_input, east = img_led_input, south = img_led_input, west = img_led_input },
-        activity_led_light = { intensity = 0.8, size = 1, },
-        activity_led_light_offsets = { {0, 0}, {0, 0}, {0, 0}, {0, 0} },
-        circuit_wire_connection_points = { con_point_input, con_point_input, con_point_input, con_point_input },
-        circuit_wire_max_distance = 10
-    }, 
-	{
-		type = "container",
-		name = "plc-unit",
-		icon = FOLDER.."/graphics/icon/plc.png",
-        icon_size = 128,
-		flags = {"placeable-neutral", "placeable-player", "player-creation"},
-		minable = {hardness = 0.2, mining_time = 2, result = "plc-unit"},
-		max_health = 250,
-		corpse = "big-remnants",
-		dying_explosion = "medium-explosion",
-		open_sound = { filename = "__base__/sound/machine-open.ogg", volume = 0.85 },
-		close_sound = { filename = "__base__/sound/machine-close.ogg", volume = 0.75 },
-		vehicle_impact_sound = { filename = "__base__/sound/car-metal-impact.ogg", volume = 0.65 },
-		scale_entity_info_icon = true,
-		resistances = {{type = "fire", percent = 90}},
-		collision_box = {{-1.4, -1.4}, {1.4, 1.4}},
-        selection_box = {{-0.8, -1.4}, {0.8, 1.4}},
-    	inventory_size = 0,
-		scale_info_icons = true,
-		picture = { filename = FOLDER.."/graphics/entity/plc.png", priority = "high", width = 250, height = 200, shift = {0.34375, 0}, },
-		-- circuit_connector_sprites = define_storehouse_connector({0.1875, 0.15625}),
-		circuit_wire_max_distance = 0,
-		circuit_wire_connection_point = nil,
-	},
-	{
-		type = "assembling-machine",
-		name = "plc-power",
-        icon_size = 128,
-		icon = FOLDER.."/graphics/icon/plc.png",
-		flags = {"placeable-player", "player-creation", "placeable-off-grid", "not-deconstructable", "not-repairable"},
-        minable = nil,
-		max_health = 150,
-		corpse = "small-remnants",
-		collision_box = {{-0.9, -0.9}, {0.9, 0.9}},
-		selection_box = {{-0.0, -0.0}, {0.0, 0.0}},
-		collision_mask = {"not-colliding-with-itself"},
-        selectable_in_game = false,
-        fluid_boxes = {},
-		animation = { filename = FOLDER.."/graphics/blank.png", priority = "low", width = 1, height = 1, frame_count = 1, line_length = 1, shift = {0.0, 0.0} },
-		vehicle_impact_sound =  {filename = "__base__/sound/car-metal-impact.ogg", volume = 0.65},
-		open_sound = {filename = "__base__/sound/machine-open.ogg", volume = 0.85},
-		close_sound = {filename = "__base__/sound/machine-close.ogg", volume = 0.75},
-		working_sound = { sound = { filename = "__base__/sound/accumulator-working.ogg", volume = 0.0 }, idle_sound = { filename = "__base__/sound/accumulator-idle.ogg", volume = 0.0 }, apparent_volume = 1.5, },
-		crafting_categories = {"plc-power"},
-		fixed_recipe = "plc-power",
-		crafting_speed = 1.0,
-		energy_source = { type = "electric", usage_priority = "secondary-input", emissions = 0 },
-		energy_usage = "120kW",
-		ingredient_count = 0,
-		module_specification = {},
-		allowed_effects = {}
-	},
+---comment
+---@param type string
+---@return data.ConstantCombinatorPrototype|nil
+function io_entity(type)
+	if not type or type ~= "input" and type ~= "output" then
+		return nil
+	end
+	local entity = table.deepcopy(data.raw["constant-combinator"]["constant-combinator"])
+	entity.name = "plc-" .. type
+	entity.icon = FOLDER .. "/graphics/icon/plc.png"
+	table.insert(entity.flags, "placeable-off-grid")
+	table.insert(entity.flags, "not-deconstructable")
+	table.insert(entity.flags, "not-repairable")
+	entity.minable = nil
+	entity.operable = false
+	entity.collision_box = { { -0.0, -0.0 }, { 0.0, 0.0 } }
+	entity.collision_mask = { "not-colliding-with-itself" }
+	entity.selection_box = { { -0.4, -0.4 }, { 0.4, 0.4 } }
+	entity.sprites = { north = img_blank, east = img_blank, south = img_blank, west = img_blank }
+	entity.activity_led_light = { intensity = 0.8, size = 1, }
+	entity.activity_led_light_offsets = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
+	entity.circuit_wire_max_distance = 10
+	if type == "output" then
+		entity.item_slot_count = 1000
+--		entity.circuit_wire_connection_points = { con_point_input, con_point_input, con_point_input, con_point_input }
+	else
+--		entity.circuit_wire_connection_points = { con_point_output, con_point_output, con_point_output, con_point_output }
+		entity.item_slot_count = 0
+		entity.activity_led_sprites = {
+			north = img_led_input,
+			east = img_led_input,
+			south = img_led_input,
+			west = img_led_input
+		}
+		entity.activity_led_sprites = {
+			north = img_led_output,
+			east = img_led_output,
+			south = img_led_output,
+			west = img_led_output
+		}
+	end
+	return entity
+end
 
-})
+---comment
+---@return data.AssemblingMachinePrototype
+function unit_entity()
+	local entity = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"])
+	entity.name = "plc-unit"
+	entity.icon = FOLDER .. "/graphics/icon/plc.png"
+	entity.minable = { mining_time = 2, result = "plc-unit" }
+	entity.corpse = "big-remnants"
+	entity.dying_explosion = "medium-explosion"
+	entity.selection_box = { { -0.8, -1.4 }, { 0.8, 1.4 } }
+	entity.inventory_size = 0
+	entity.picture = {
+		filename = FOLDER .. "/graphics/entity/plc.png",
+		priority = "high",
+		width = 250,
+		height = 200,
+		shift = { 0.34375, 0 },
+	}
+	entity.crafting_categories = { "plc-unit" }
+	entity.fixed_recipe = "plc-unit-power"
+	entity.crafting_speed = 1.0
+	entity.energy_source = { type = "electric", usage_priority = "secondary-input", emissions_per_minute = 0 }
+	entity.energy_usage = "120kW"
+	entity.ingredient_count = 0
+	entity.module_specification = {}
+	entity.allowed_effects = {}
+	entity.animation.layers = {{
+		filename = FOLDER .. "/graphics/entity/plc.png",
+		frame_count = 1,
+		width = 250,
+		height = 200,
+		line_length = 8,
+		priority = "high",
+		shift = { 0.34375, 0 },
+	}}
+	return entity
+end
 
+local input = io_entity("input")
+local output = io_entity("output")
+local unit = unit_entity()
+
+if input ~= nil and output ~= nil and unit ~= nil then
+	data:extend({ input, output, unit, })
+end
