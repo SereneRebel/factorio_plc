@@ -22,12 +22,24 @@ local img_led_input = {
 	shift = { 0.296875, -0.40625 },
 }
 local con_point_output = {
-	shadow = { red = { 0.15, -0.105 }, green = { 0.15, 0.11 }, },
-	wire = { red = { 0.17, -0.045 }, green = { 0.17, 0.17 }, }
+	shadow = {
+		red = { -0.05, -0.4 },
+		green = { -0.05, -0.2 },
+	},
+	wire = {
+		red = { -0.05, -0.35 },
+		green = { -0.05, -0.15 },
+	}
 }
 local con_point_input = {
-	shadow = { red = { -0.18, -0.105 }, green = { -0.18, 0.11 }, },
-	wire = { red = { -0.20, -0.045 }, green = { -0.20, 0.17 }, }
+	shadow = {
+		red = { 0.05, -0.4 },
+		green = { 0.05, -0.2 },
+	},
+	wire = {
+		red = { 0.05, -0.35 },
+		green = { 0.05, -0.15 },
+	}
 }
 
 ---comment
@@ -45,6 +57,7 @@ function io_entity(type)
 	table.insert(entity.flags, "not-repairable")
 	entity.minable = nil
 	entity.operable = false
+	entity.rotatable = false
 	entity.collision_box = { { -0.0, -0.0 }, { 0.0, 0.0 } }
 	entity.collision_mask = { "not-colliding-with-itself" }
 	entity.selection_box = { { -0.4, -0.4 }, { 0.4, 0.4 } }
@@ -54,9 +67,9 @@ function io_entity(type)
 	entity.circuit_wire_max_distance = 10
 	if type == "output" then
 		entity.item_slot_count = 1000
---		entity.circuit_wire_connection_points = { con_point_input, con_point_input, con_point_input, con_point_input }
+		entity.circuit_wire_connection_points = { con_point_output, con_point_output, con_point_output, con_point_output }
 	else
---		entity.circuit_wire_connection_points = { con_point_output, con_point_output, con_point_output, con_point_output }
+		entity.circuit_wire_connection_points = { con_point_input, con_point_input, con_point_input, con_point_input }
 		entity.item_slot_count = 0
 		entity.activity_led_sprites = {
 			north = img_led_input,
@@ -105,9 +118,10 @@ function unit_entity()
 		frame_count = 1,
 		width = 250,
 		height = 200,
+		scale = 0.8,
 		line_length = 8,
 		priority = "high",
-		shift = { 0.34375, 0 },
+		shift = { 0.3, 0.45 },
 	}}
 	return entity
 end

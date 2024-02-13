@@ -128,7 +128,10 @@ function M.on_tick(event)
 	local to_remove = {}
 	for key, struct in pairs(structures) do
 		if struct.entities and struct.entities.main and struct.entities.main.valid then
-			if struct.entities.main.active and struct.data.running then
+			local active = struct.entities.main.active
+			local status = struct.entities.main.status
+			local running = struct.data.running
+			if active and running and status == defines.entity_status.working then
 				readInputs(struct) -- first step is sample the inputs
 				program.tickProgram(struct)	-- next we process all the code in the unit
 				writeOutputs(struct) -- then we output the resulting outputs
@@ -288,7 +291,7 @@ end
 ---comment
 ---@param event EventData.on_robot_pre_mined|EventData.on_pre_player_mined_item|EventData.on_entity_died
 function M.on_entity_removed(event)
-	if not event.entity or not event.entity.valid then
+	if not event.entity or not event.entity.valid or event.entity.name ~= "plc-unit" then
 		return
 	end
 	local parts = event.entity.surface.find_entities_filtered{
