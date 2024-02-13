@@ -295,6 +295,25 @@ function variablePage(frame, struct)
 	end
 end
 
+--- Updates text and such from the program data
+---@param gui_program_row LuaGuiElement
+---@param code structure.program.program_data
+local function update_program_line(gui_program_row, code, enabled)
+	local command = program.commandList[code.command]
+	gui_program_row.children[1].enabled = enabled -- trash
+	gui_program_row.children[2].enabled = enabled -- up
+	gui_program_row.children[3].enabled = enabled -- down
+	gui_program_row.children[4].enabled = enabled -- command
+	gui_program_row.children[4].tooltip = { "plc_command_tooltip." .. (command.disp) }
+	gui_program_row.children[4].selected_index = code.command
+	gui_program_row.children[5].enabled = enabled and (command.params > 0) -- param 1
+	gui_program_row.children[5].text = code.parameter1 and code.parameter1 or ""
+	gui_program_row.children[6].enabled = enabled and (command.params > 1)-- param 2
+	gui_program_row.children[6].text = code.parameter2 and code.parameter2 or ""
+	gui_program_row.children[7].enabled = enabled and (command.params > 2)-- param 3
+	gui_program_row.children[7].text = code.parameter3 and code.parameter3 or ""
+end
+
 -- something was clicked
 ---comment
 ---@param event EventData.on_gui_click
@@ -369,46 +388,47 @@ function M.on_gui_click(event)
 			program_frame.children[i].children[5].enabled = enabled and (command.params > 0) -- param 1
 			program_frame.children[i].children[6].enabled = enabled and (command.params > 1)-- param 2
 			program_frame.children[i].children[7].enabled = enabled and (command.params > 2)-- param 3
-			end
+		end
 		return
 	end
-
-
-
-
-
-	-- -- program line delete
-	-- local cmd, index = string.match(element.name, "^plc_prgm_(%a+)_(%d+)")
-	-- if cmd and cmd ~= "" and index and index ~= "" then
-	-- 	index = tonumber(index)
-	-- 	if cmd == "delete" then
-	-- 		gui.structure.program.program[index] = { cmd = 1, params = {} }
-	-- 		drawGUI(player, event.player_index, gui.structure)
-	-- 		return
-	-- 	end
-	-- 	if cmd == "movedn" and index < gui.structure.program.programCount then
-	-- 		local tmp1 = gui.structure.program.program[index]
-	-- 		local tmp2 = gui.structure.program.program[index + 1]
-	-- 		gui.structure.program.program[index] = tmp2
-	-- 		gui.structure.program.program[index + 1] = tmp1
-	-- 		drawGUI(player, event.player_index, gui.structure)
-	-- 	end
-	-- 	if cmd == "moveup" and index > 1 then
-	-- 		local tmp1 = gui.structure.program.program[index]
-	-- 		local tmp2 = gui.structure.program.program[index - 1]
-	-- 		gui.structure.program.program[index] = tmp2
-	-- 		gui.structure.program.program[index - 1] = tmp1
-	-- 		drawGUI(player, event.player_index, gui.structure)
-	-- 	end
-	-- end
-
-
-
+	-- Handle button events
+	-- get the element details
+	local command, line = string.match(event.element.name, "^signal%-controller%-program%-(.+)%-(%d+)$")
+	-- Check if the string matches
+	line = tonumber(line)
+	if command ~= nil and line ~= nil and struct ~= nil then
+		local program_frame = gui["signal-controller-tabbed-pane"]["signal-controller-program-pane"].children[1]
+		local enabled = not struct.data.running
+		if command == "delete" then
+			-- empty the program line
+			struct.program.program_data[line] = { command = 1, parameter1 = "", parameter2 = "", parameter3 = "", }
+			-- update the gui line
+			update_program_line(program_frame.children[line], struct.program.program_data[line], enabled)
+		elseif command == "down" and line < struct.program.program_count then
+			-- swap this line with the one below it
+			local tmp1 = struct.program.program_data[line]
+			local tmp2 = struct.program.program_data[line + 1]
+			struct.program.program_data[line] = tmp2
+			struct.program.program_data[line + 1] = tmp1
+			-- update both lines
+			update_program_line(program_frame.children[line], struct.program.program_data[line], enabled)
+			update_program_line(program_frame.children[line + 1], struct.program.program_data[line + 1], enabled)
+		elseif command == "up" and line > 1 then
+			-- swap this line with the one above it
+			local tmp1 = struct.program.program_data[line]
+			local tmp2 = struct.program.program_data[line - 1]
+			struct.program.program_data[line] = tmp2
+			struct.program.program_data[line - 1] = tmp1
+			-- update both lines
+			update_program_line(program_frame.children[line], struct.program.program_data[line], enabled)
+			update_program_line(program_frame.children[line - 1], struct.program.program_data[line - 1], enabled)
+		end
+		return
+	end
 	-- xyz handling
 	player.print("Unhandled event onClick - element.name = "..element.name)
 	player.print("element.type = "..element.type)
 end
-
 -- something on the gui changed
 ---comment
 ---@param event EventData.on_gui_elem_changed
@@ -459,7 +479,7 @@ function M.on_gui_changed(event)
 		row.children[5].enabled = (command.params > 0) -- param 1
 		row.children[6].enabled = (command.params > 1) -- param 2
 		row.children[7].enabled = (command.params > 2) -- param 3
-elseif name == "param1" then
+	elseif name == "param1" then
 		local new_value = element.text
 		struct.program.program_data[number].parameter1 = new_value
 	elseif name == "param2" then

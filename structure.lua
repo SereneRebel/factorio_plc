@@ -296,8 +296,7 @@ function M.on_entity_removed(event)
 			{event.entity.position.x - 1.5, event.entity.position.y - 1.5},
 			{event.entity.position.x + 1.5, event.entity.position.y + 1.5}
 		},
-		name = "plc-unit",
-		invert = true,
+		name = {"plc-input", "plc-output"},
 	}
 	for _, part in pairs(parts) do
 		part.destroy()
