@@ -54,45 +54,60 @@ function M.get_all_structures()
 	return global.plc_structures
 end
 
-
-local function insertSignal(container, signal, count)
-	if not container[signal.type] then
-		container[signal.type] = {}
+--- Insert signal into table
+---@param container table
+---@param signal Signal
+local function insertSignal(container, signal)
+	if not container[signal.signal.type] then
+		container[signal.signal.type] = {}
 	end
-	if container[signal.type][signal.name] then
-		container[signal.type][signal.name].count = container[signal.type][signal.name].count + count
+	if container[signal.signal.type][signal.signal.name] then
+		container[signal.signal.type][signal.signal.name].count = container[signal.signal.type][signal.signal.name].count + signal.count
 	else
-		container[signal.type][signal.name] = { signal = signal, count = count }
+		container[signal.signal.type][signal.signal.name] = { signal = signal.signal, count = signal.count }
 	end
 end
 
 ---Reads all the input signals from incoming curcuit network
 ---@param struct structure_table
 local function readInputs(struct)
+	local red_inputs = {}
+	local green_inputs = {}
 	if struct.entities.input then
-		struct.data.inputs = {}
-		struct.data.outputs = {}
+		-- get red signals
 		local network = struct.entities.input.get_circuit_network(defines.wire_type.red)
 		if network and network.signals then
-			for _, signal_count in pairs(network.signals) do
-				insertSignal(struct.data.inputs, signal_count.signal, signal_count.count)
+			for _, signal in pairs(network.signals) do
+				insertSignal(red_inputs, signal)
 			end
 		end
+		-- get green signals
 		network = struct.entities.input.get_circuit_network(defines.wire_type.green)
 		if network and network.signals then
-			for _, signal_count in pairs(network.signals) do
-				insertSignal(struct.data.inputs, signal_count.signal, signal_count.count)
+			for _, signal in pairs(network.signals) do
+				insertSignal(green_inputs, signal)
 			end
 		end
 	end
+	-- now we have all the signal inputs and we need to transfer the input definitions to the variables area
 	for _, input in pairs(struct.program.input_data) do
 		if input and input.signal and input.name then
-			if struct.data.inputs[input.signal.type] and struct.data.inputs[input.signal.type][input.signal.name] then
-				-- there is a signal for the given filter - save it
-				struct.data.variables[input.name] = struct.data.inputs[input.signal.type][input.signal.name].count
-			else
-				struct.data.variables[input.name] = 0
+			local wire = input.wire or "none" -- the wire to get signal from
+			local type = input.signal.type
+			local name = input.signal.name
+			local count = 0
+			if wire ~= "left" then -- is this signal getting read from the red wire
+				if red_inputs[type] and red_inputs[type][name] then
+					-- there is a signal for the given filter - save it
+					count = count + red_inputs[type][name].count
+				end
 			end
+			if wire ~= "right" then -- is this signal getting read from the green wire
+				if green_inputs[type] and green_inputs[type][name] then
+					count = count + green_inputs[type][name].count
+				end
+			end
+			struct.data.variables[input.name] = count
 		end
 	end
 end
@@ -100,21 +115,20 @@ end
 ---Write all the output signals to outgoing curcuit network
 ---@param struct structure_table
 local function writeOutputs(struct)
-	for _, output in pairs(struct.program.output_data) do
-		if output and output.signal and output.name and output.name ~= "" then
-			if struct.data.variables[output.name] ~= nil then
-				-- there is a signal for the given filter - save it
-				insertSignal(struct.data.outputs, output.signal, math.floor(struct.data.variables[output.name]))
-			end
-		end
-	end
-	if struct.entities.output and struct.data.outputs then
+	if struct.entities.output and struct.data.variables then
 		local index = 1;
+		--- @type LuaConstantCombinatorControlBehavior 
 		local behaviour = struct.entities.output.get_or_create_control_behavior()
-		for _, signals in pairs(struct.data.outputs) do -- for each type of signal
-			for _, signal in pairs(signals) do          -- then each of the signals in those types
-				behaviour.set_signal(index, signal)
-				index = index + 1
+		if behaviour == nil then
+			return
+		end
+		for _, output in pairs(struct.program.output_data) do
+			if output and output.signal and output.name and output.name ~= "" then
+				if struct.data.variables[output.name] ~= nil then
+					-- there is a signal for the given filter - save it
+					behaviour.set_signal(index, { signal = output.signal, count = math.floor(struct.data.variables[output.name])})
+					index = index + 1
+				end
 			end
 		end
 	end
@@ -240,11 +254,11 @@ function on_build_structure(entity)
 	structure.entities = {main = entity, input = input, output = output, }
 	structure.program.input_count = 8
 	for line = 1, 8 do
-		structure.program.input_data[line] = { signal = nil, name = "" }
+		structure.program.input_data[line] = { signal = nil, name = "", wire="none" }
 	end
 	structure.program.output_count = 8
 	for line = 1, 8 do
-		structure.program.output_data[line] = { signal = nil, name = "" }
+		structure.program.output_data[line] = { signal = nil, name = "", wire="none" }
 	end
 	structure.program.variable_count = 8
 	for line = 1, 8 do

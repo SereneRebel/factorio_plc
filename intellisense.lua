@@ -29,7 +29,9 @@ do
     ---I/O name
     ---@field name string
     ---Signal
-    ---@field signal nil|string|SignalID
+    ---@field signal nil|SignalID
+    ---Wire type to read from
+    ---@field wire string
     local io_data = { }
 end
 do
@@ -64,10 +66,6 @@ end
 do
     ---Current run-time state variables
     ---@class structure.data
-    ---Current input values
-    ---@field inputs table
-    ---Current output values
-    ---@field outputs table
     ---Current variable values
     ---@field variables table
     ---Is the program running?

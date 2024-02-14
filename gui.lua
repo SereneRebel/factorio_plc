@@ -124,7 +124,15 @@ function add_tab(tab_pane, name, content_func, struct)
 	return tab
 end
 
-function add_named_signal_row(parent, line, text, signal, enabled, direction, struct)
+---comment
+---@param parent LuaGuiElement
+---@param line integer
+---@param entry structure.program.variable_data|structure.program.inputoutput_data
+---@param enabled any
+---@param direction any
+---@param struct any
+---@return unknown
+function add_named_signal_row(parent, line, entry, enabled, direction, struct)
 	local name = "signal-controller-" .. direction
 	local page_flow = parent.add {
 		type = "flow",
@@ -136,7 +144,7 @@ function add_named_signal_row(parent, line, text, signal, enabled, direction, st
 		caption = "Slot "..line..":",
 	}
 	local textbox = page_flow.add{
-		text = text,
+		text = entry.name,
 		type = "textfield",
 		tooltip = { "plc_tooltip."..direction.."_variable_select" },
 		tags = {["line"] = line, ["unit_number"] = struct.entities.main.unit_number},
@@ -151,8 +159,21 @@ function add_named_signal_row(parent, line, text, signal, enabled, direction, st
 			elem_type = "signal",
 			name = name .. "-signal-" .. line,
 		}
-		button.elem_value = signal
+		button.elem_value = entry.signal
 		button.enabled = enabled
+	end
+	if direction == "input" then
+		local wbutton = page_flow.add{
+			type = "switch",
+			tooltip = "Wire to take signal from",
+			tags = {["line"] = line, ["unit_number"] = struct.entities.main.unit_number},
+			name = name .. "-wire-" .. line,
+		}
+		wbutton.left_label_caption = "Green"
+		wbutton.right_label_caption = "Red"
+		wbutton.allow_none_state = true
+		wbutton.switch_state = entry.wire or "none"
+		wbutton.enabled = enabled
 	end
 	return page_flow
 end
@@ -269,7 +290,7 @@ function inputPage(frame, struct)
 	local count = struct.program.input_count
 	for line = 1, count do
 		local entry = struct.program.input_data[line]
-		add_named_signal_row(frame, line, entry.name, entry.signal, (struct.data.running == false), "input", struct)
+		add_named_signal_row(frame, line, entry, (struct.data.running == false), "input", struct)
 	end
 end
 
@@ -280,7 +301,7 @@ function outputPage(frame, struct)
 	local count = struct.program.output_count
 	for line = 1, count do
 		local entry = struct.program.output_data[line]
-		add_named_signal_row(frame, line, entry.name, entry.signal, (struct.data.running == false), "output", struct)
+		add_named_signal_row(frame, line, entry, (struct.data.running == false), "output", struct)
 	end
 end
 
@@ -291,7 +312,7 @@ function variablePage(frame, struct)
 	local count = struct.program.variable_count
 	for line = 1, count do
 		local entry = struct.program.variable_data[line]
-		add_named_signal_row(frame, line, entry.name, nil, (struct.data.running == false), "variable", struct)
+		add_named_signal_row(frame, line, entry, (struct.data.running == false), "variable", struct)
 	end
 end
 
@@ -367,6 +388,7 @@ function M.on_gui_click(event)
 		for i = 1, struct.program.input_count do
 			input_frame.children[i].children[2].enabled = enabled -- name
 			input_frame.children[i].children[3].enabled = enabled -- signal
+			input_frame.children[i].children[4].enabled = enabled -- wire
 		end
 		local output_frame = gui["signal-controller-tabbed-pane"]["signal-controller-outputs-pane"].children[1]
 		for i = 1, struct.program.output_count do
@@ -425,6 +447,18 @@ function M.on_gui_click(event)
 		end
 		return
 	end
+	-- get the element details
+	local name, number = string.match(event.element.name, "^signal%-controller%-(.+)%-(%d+)$")
+	-- Check if the string matches
+	if name and number and struct ~= nil then
+		number = tonumber(number)
+		if name == "input-wire" then
+			struct.program.input_data[number].wire = element.switch_state
+		elseif name == "output-wire" then
+			struct.program.output_data[number].wire = element.switch_state
+		end
+		return
+	end
 	-- xyz handling
 	player.print("Unhandled event onClick - element.name = "..element.name)
 	player.print("element.type = "..element.type)
@@ -456,38 +490,30 @@ function M.on_gui_changed(event)
 	number = tonumber(number)
 	-- menu tab handling
 	if name == "input-name" then
-		local new_value = element.text
-		struct.program.input_data[number].name = new_value
+		struct.program.input_data[number].name = element.text
 	elseif name == "input-signal" then
-		local new_value = element.elem_value
-		struct.program.input_data[number].signal = new_value
+		struct.program.input_data[number].signal = element.elem_value
 	elseif name == "output-name" then
-		local new_value = element.text
-		struct.program.output_data[number].name = new_value
+		struct.program.output_data[number].name = element.text
 	elseif name == "output-signal" then
-		local new_value = element.elem_value
-		struct.program.output_data[number].signal = new_value
+		struct.program.output_data[number].signal = element.elem_value
 	elseif name == "variable-name" then
-		local new_value = element.text
-		struct.program.variable_data[number].name = new_value
+		struct.program.variable_data[number].name = element.text
+	elseif name == "param1" then
+		struct.program.program_data[number].parameter1 = element.text
+	elseif name == "param2" then
+		struct.program.program_data[number].parameter2 = element.text
+	elseif name == "param3" then
+		struct.program.program_data[number].parameter3 = element.text
 	elseif name == "command" then
 		local new_value = element.selected_index
+		struct.program.program_data[number].command = new_value
 		local command = program.commandList[new_value or 1]
 		local row = program_frame.children[number]
-		struct.program.program_data[number].command = new_value
 		row.children[4].tooltip = { "plc_command_tooltip." .. (command.disp) }
 		row.children[5].enabled = (command.params > 0) -- param 1
 		row.children[6].enabled = (command.params > 1) -- param 2
 		row.children[7].enabled = (command.params > 2) -- param 3
-	elseif name == "param1" then
-		local new_value = element.text
-		struct.program.program_data[number].parameter1 = new_value
-	elseif name == "param2" then
-		local new_value = element.text
-		struct.program.program_data[number].parameter2 = new_value
-	elseif name == "param3" then
-		local new_value = element.text
-		struct.program.program_data[number].parameter3 = new_value
 	else
 		player.print("Unhandled event onGuiChanged - element.name = "..element.name)
 	end
