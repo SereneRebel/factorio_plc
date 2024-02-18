@@ -1,16 +1,46 @@
-function printTable(player, data, indentation)
+
+require "intellisense"
+
+
+
+
+
+--- Get the selected index from string
+---@param list string[]
+---@param value string
+---@return integer
+function value_to_selected(list, value)
+	for i, v in ipairs(list) do
+		if value == v then
+			return i
+		end
+	end
+	return 1
+end
+--- Get the string from selected index
+---@param list string[]
+---@param selected integer
+---@return string
+function selected_to_value(list, selected)
+	return list[selected]
+end
+
+
+
+
+function printTable(data, indentation)
 	indentation = indentation or " "
 	if data == nil then
-		player.print(indentation .. "nil")
+		print(indentation .. "nil")
 	else
 		if type(data) == "table" then
 			for k, v in pairs(data) do
-				printTable(player, v, indentation .. "." .. k)
+				printTable(v, indentation .. "." .. k)
 			end
 		elseif type(data) == "userdata" then
-			player.print(indentation .. (getmetatable(data) or "userdata " .. tostring(data)))
+			print(indentation .. (getmetatable(data) or ("userdata " .. tostring(data))))
 		elseif type(data) ~= "function" then
-			player.print(indentation .. tostring(data))
+			print(indentation .. tostring(data))
 		end
 	end
 end

@@ -1,11 +1,11 @@
 {
   "name": "SignalController",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "title": "Circuit Signal Controller Unit",
   "author": "SereneRebel",
   "contact": "bidspec@gmail.com",
-  "homepage": "",
+  "homepage": "https://github.com/SereneRebel/factorio_plc",
   "factorio_version": "1.1",
   "dependencies": ["base >= 1.1"],
-  "description": "Manipulate your signals just like a PLC"
+  "description": "Manipulate your signals just like a PLC\n\nStill WIP so please, if anything goes wrong please lodge a discussion or head to github and put in an issue\n\nV 2.0.0 has major re-write and fixes. if there is an issue with your save i would love to hear from you to fix the problem"
 }

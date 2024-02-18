@@ -1,5 +1,12 @@
 local default_gui = data.raw["gui-style"].default
 
+default_gui["plc_main_frame"] =
+{
+  type = "frame_style",
+  parent = "frame",
+  size = { 850, 650 },
+}
+
 default_gui["plc_textfield"] = {
 	type = "textbox_style",
 	parent = "textbox",

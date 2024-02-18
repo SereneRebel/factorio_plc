@@ -3,54 +3,63 @@ require "intellisense"
 local program = require "program"
 local M = {}
 
+---@type PlcData[]
+global.plc_structures = global.plc_structures or {}
+
+---Populates a new empty struct table
+---@return PlcData
+local function new_structure()
+	---@type PlcData
+	local struct = {
+		entities = {
+			main = nil,
+			input = nil,
+			output = nil,
+		},
+		program = {
+			inputs = {},
+			outputs = {},
+			variables = {},
+			commands = {},
+			input_links = { {io_param = nil,var_param = nil} },
+			output_links = { {io_param = nil,var_param = nil} },
+			input_list = {"Constant"},
+			output_list = {"None"},
+		},
+		data = {
+			inputs = {},
+			outputs = {},
+			variables = {},
+			running = false,
+			execute_next = true,
+			cb_funcs = {},
+			cb_keys = {},
+		},
+	}
+	return struct
+end
+
+
+
 ---Get the global table containing all our structure info
 ---@param index integer|uint -- entity to lookup in the structure table
----@return nil|structure_table
+---@return PlcData
 function M.get_structure(index)
-	if not global.plc_structures then
-		global.plc_structures = {}
-	end
 	if not global.plc_structures[index] then
-		global.plc_structures[index] = {
-			entities = {
-				main = nil,
-				input = nil,
-				output = nil,
-			},
-			program = {
-				input_count = 0,
-				input_data = {},
-				output_count = 0,
-				output_data = {},
-				variable_count = 0,
-				variable_data = {},
-				program_count = 0,
-				program_data = {}
-			},
-			data = {
-				inputs = {},
-				outputs = {},
-				variables = {},
-				running = false,
-				execute_next = true,
-			},
-		}
+		global.plc_structures[index] = new_structure()
 	end
 	return global.plc_structures[index]
 end
 
 ---Remove the structure info from the global table containing of structures
----@param index LuaEntity -- entity to lookup amd remove from the structure table
+---@param index integer -- entity to lookup amd remove from the structure table
 function M.remove_structure(index)
 	global.plc_structures[index] = nil
 end
 
 ---Gets the entire structure list for iterating
----@return structure_table
+---@return PlcEntities
 function M.get_all_structures()
-	if not global.plc_structures then
-		global.plc_structures = {}
-	end
 	return global.plc_structures
 end
 
@@ -69,7 +78,7 @@ local function insertSignal(container, signal)
 end
 
 ---Reads all the input signals from incoming curcuit network
----@param struct structure_table
+---@param struct PlcData
 local function readInputs(struct)
 	local red_inputs = {}
 	local green_inputs = {}
@@ -90,7 +99,7 @@ local function readInputs(struct)
 		end
 	end
 	-- now we have all the signal inputs and we need to transfer the input definitions to the variables area
-	for _, input in pairs(struct.program.input_data) do
+	for _, input in pairs(struct.program.inputs) do
 		if input and input.signal and input.name then
 			local wire = input.wire or "none" -- the wire to get signal from
 			local type = input.signal.type
@@ -113,7 +122,7 @@ local function readInputs(struct)
 end
 
 ---Write all the output signals to outgoing curcuit network
----@param struct structure_table
+---@param struct PlcData
 local function writeOutputs(struct)
 	if struct.entities.output and struct.data.variables then
 		local index = 1;
@@ -122,7 +131,7 @@ local function writeOutputs(struct)
 		if behaviour == nil then
 			return
 		end
-		for _, output in pairs(struct.program.output_data) do
+		for _, output in pairs(struct.program.outputs) do
 			if output and output.signal and output.name and output.name ~= "" then
 				if struct.data.variables[output.name] ~= nil then
 					-- there is a signal for the given filter - save it
@@ -241,7 +250,7 @@ function on_build_structure(entity)
 	if input == nil or output == nil then
 		if input then input.destroy() end
 		if output then output.destroy() end
-		M.remove_structure(entity) -- remove it if it exists
+		M.remove_structure(entity.unit_number) -- remove it if it exists
 		entity.destroy()
 		return
 	end
@@ -252,24 +261,18 @@ function on_build_structure(entity)
 		return
 	end
 	structure.entities = {main = entity, input = input, output = output, }
-	structure.program.input_count = 8
 	for line = 1, 8 do
-		structure.program.input_data[line] = { signal = nil, name = "", wire="none" }
+		structure.program.inputs[line] = { signal = nil, name = "", wire="none" }
 	end
-	structure.program.output_count = 8
 	for line = 1, 8 do
-		structure.program.output_data[line] = { signal = nil, name = "", wire="none" }
+		structure.program.outputs[line] = { signal = nil, name = "", wire="none" }
 	end
-	structure.program.variable_count = 8
 	for line = 1, 8 do
-		structure.program.variable_data[line] = { name = "" }
+		structure.program.variables[line] = { name = "" }
 	end
-	structure.program.program_count = 100
 	for line = 1, 100 do
-		structure.program.program_data[line] = { command = 1, parameter1 = "", parameter2 = "", parameter3 = "", }
+		structure.program.commands[line] = { command = 1, in_param_a = 1, in_const_a = 0, in_param_b = 1, in_const_b = 0, out_param = 1, }
 	end
-	structure.data.inputs = {}
-	structure.data.outputs = {}
 	structure.data.variables = {}
 	structure.data.running = false
 	structure.data.execute_next = true
@@ -296,7 +299,7 @@ function M.on_entity_cloned(event)
 		local old_struct = M.get_structure(source_entity.unit_number)
 		local new_struct = M.get_structure(dest_entity.unit_number)
 		if old_struct and new_struct then
-			new_struct.program = table.deepcopy(old_struct.program)
+			new_struct.data = table.deepcopy(old_struct.program)
 			new_struct.data = table.deepcopy(old_struct.data)
 		end
 	end
