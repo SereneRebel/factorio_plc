@@ -6,6 +6,14 @@ local M = {}
 ---@type PlcData[]
 global.plc_structures = global.plc_structures or {}
 
+function M.fill_prog_list(struct)
+	struct.data.command_dropdown = {strings={},link={}}
+	for i, cmd in ipairs(program.commandList) do
+		table.insert(struct.data.command_dropdown.strings, i, cmd.disp)
+		table.insert(struct.data.command_dropdown.link, i, cmd)
+	end
+end
+
 ---Populates a new empty struct table
 ---@return PlcData
 local function new_structure()
@@ -20,13 +28,13 @@ local function new_structure()
 			inputs = {},
 			outputs = {},
 			variables = {},
+			constants = {},
 			commands = {},
-			input_links = { {io_param = nil,var_param = nil} },
-			output_links = { {io_param = nil,var_param = nil} },
-			input_list = {"Constant"},
-			output_list = {"None"},
 		},
 		data = {
+			command_dropdown = { strings = {}, link = {} },
+			input_dropdown = { strings = {}, link = {} },
+			output_dropdown = { strings = {}, link = {} },
 			inputs = {},
 			outputs = {},
 			variables = {},
@@ -34,8 +42,12 @@ local function new_structure()
 			execute_next = true,
 			cb_funcs = {},
 			cb_keys = {},
+			status = { status = "ok", msg = ""},
+			live_page = nil,
+			alert_holdoff = 0,
 		},
 	}
+	M.fill_prog_list(struct)
 	return struct
 end
 
@@ -58,7 +70,7 @@ function M.remove_structure(index)
 end
 
 ---Gets the entire structure list for iterating
----@return PlcEntities
+---@return PlcData[]
 function M.get_all_structures()
 	return global.plc_structures
 end
@@ -116,7 +128,7 @@ local function readInputs(struct)
 					count = count + green_inputs[type][name].count
 				end
 			end
-			struct.data.variables[input.name] = count
+			input.value = count
 		end
 	end
 end
@@ -124,7 +136,7 @@ end
 ---Write all the output signals to outgoing curcuit network
 ---@param struct PlcData
 local function writeOutputs(struct)
-	if struct.entities.output and struct.data.variables then
+	if struct.entities.output and struct.program.outputs then
 		local index = 1;
 		--- @type LuaConstantCombinatorControlBehavior 
 		local behaviour = struct.entities.output.get_or_create_control_behavior()
@@ -133,11 +145,9 @@ local function writeOutputs(struct)
 		end
 		for _, output in pairs(struct.program.outputs) do
 			if output and output.signal and output.name and output.name ~= "" then
-				if struct.data.variables[output.name] ~= nil then
-					-- there is a signal for the given filter - save it
-					behaviour.set_signal(index, { signal = output.signal, count = math.floor(struct.data.variables[output.name])})
-					index = index + 1
-				end
+				-- there is a signal for the given filter - save it
+				behaviour.set_signal(index, { signal = output.signal, count = math.floor(output.value)})
+				index = index + 1
 			end
 		end
 	end
@@ -151,13 +161,19 @@ function M.on_tick(event)
 	local to_remove = {}
 	for key, struct in pairs(structures) do
 		if struct.entities and struct.entities.main and struct.entities.main.valid then
-			local active = struct.entities.main.active
 			local status = struct.entities.main.status
 			local running = struct.data.running
-			if active and running and status == defines.entity_status.working then
+			struct.entities.main.active = running
+			if running and status == defines.entity_status.working then
 				readInputs(struct) -- first step is sample the inputs
 				program.tickProgram(struct)	-- next we process all the code in the unit
 				writeOutputs(struct) -- then we output the resulting outputs
+			end
+			-- check alerts
+			struct.data.alert_holdoff = struct.data.alert_holdoff or 0
+			if (event.tick - struct.data.alert_holdoff > 200) and (struct.data.alert ~= nil) then
+				create_alert(struct.entities.main, struct.data.alert, game.players[1])
+				struct.data.alert_holdoff = event.tick
 			end
 		else
 			table.insert(to_remove, key)
@@ -262,18 +278,18 @@ function on_build_structure(entity)
 	end
 	structure.entities = {main = entity, input = input, output = output, }
 	for line = 1, 8 do
-		structure.program.inputs[line] = { signal = nil, name = "", wire="none" }
+		structure.program.inputs[line] = { type = "invalid", value = 0 }
 	end
 	for line = 1, 8 do
-		structure.program.outputs[line] = { signal = nil, name = "", wire="none" }
+		structure.program.outputs[line] = { type = "invalid", value = 0 }
 	end
 	for line = 1, 8 do
-		structure.program.variables[line] = { name = "" }
+		structure.program.variables[line] = { type = "invalid", value = 0 }
 	end
 	for line = 1, 100 do
-		structure.program.commands[line] = { command = 1, in_param_a = 1, in_const_a = 0, in_param_b = 1, in_const_b = 0, out_param = 1, }
+		structure.program.commands[line] = { command = program.commandList[1] }
 	end
-	structure.data.variables = {}
+	update_param_lists(structure)
 	structure.data.running = false
 	structure.data.execute_next = true
 end
@@ -299,7 +315,7 @@ function M.on_entity_cloned(event)
 		local old_struct = M.get_structure(source_entity.unit_number)
 		local new_struct = M.get_structure(dest_entity.unit_number)
 		if old_struct and new_struct then
-			new_struct.data = table.deepcopy(old_struct.program)
+			new_struct.program = table.deepcopy(old_struct.program)
 			new_struct.data = table.deepcopy(old_struct.data)
 		end
 	end

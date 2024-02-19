@@ -1,3 +1,5 @@
+local FOLDER = "__SignalController__"
+
 data:extend({
 	{
 		type = "recipe",
@@ -24,5 +26,7 @@ data:extend({
 		results = { { name = "plc-unit", amount = 0, probability = 0 } },
 		main_product = "plc-unit",
 		category = "plc-unit",
+		icon = FOLDER .. "/graphics/blank.png",
+		icon_size = 32,
 	},
 })

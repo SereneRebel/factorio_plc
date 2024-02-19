@@ -34,40 +34,44 @@ end
 -- Local utility functions
 --=================================================================================================
 --- Updates text and such from the program data
+---@param struct	PlcData
 ---@param gui_program_row LuaGuiElement
 ---@param program_data PlcProgramEntry
 ---@param enabled boolean
 ---@param top_row boolean?
 ---@param bot_row boolean?
-local function update_program_line(gui_program_row, program_data, enabled, top_row, bot_row)
-	local command = program.commandList[program_data.command]
-	program_data.in_param_a = program_data.in_param_a or 1
-	program_data.in_param_b = program_data.in_param_b or 1
-	program_data.out_param = program_data.out_param or 1
-	program_data.in_const_a = program_data.in_const_a or 0
-	program_data.in_const_b = program_data.in_const_b or 0
+local function update_program_line(struct, gui_program_row, program_data, enabled, top_row, bot_row)
+	local command = program_data.command
+	local index_cmd = dropdown_index_of_cmd(struct.data.command_dropdown.link, program_data.command)
+	local index_a = dropdown_index_of(struct.data.input_dropdown.link, program_data.in_param_a)
+	local index_b = dropdown_index_of(struct.data.input_dropdown.link, program_data.in_param_b)
+	local index_o = dropdown_index_of(struct.data.output_dropdown.link, program_data.out_param)
+	local const_a_visible = command.in_a and program_data.in_param_a ~= nil and program_data.in_param_a.type == "constant"
+	local const_b_visible = command.in_b and program_data.in_param_b ~= nil and program_data.in_param_b.type == "constant"
+	local const_a_value = program_data.in_param_a ~= nil and program_data.in_param_a.value or 0
+	local const_b_value = program_data.in_param_b ~= nil and program_data.in_param_b.value or 0
 
 	gui_program_row.children[1].enabled = enabled										-- trash
 	gui_program_row.children[2].enabled = enabled and top_row ~= true					-- up
 	gui_program_row.children[3].enabled = enabled and bot_row ~= true					-- down
 	gui_program_row.children[4].enabled = enabled										-- command
 	gui_program_row.children[4].tooltip = { "plc_command_tooltip." .. (command.disp) }	-- command
-	gui_program_row.children[4].selected_index = program_data.command					-- command
+	gui_program_row.children[4].selected_index = index_cmd								-- command
 	gui_program_row.children[5].enabled = enabled										-- param 1
 	gui_program_row.children[5].visible = command.in_a									-- param 1
-	gui_program_row.children[5].selected_index = program_data.in_param_a				-- param 1
+	gui_program_row.children[5].selected_index = index_a								-- param 1
 	gui_program_row.children[6].enabled = enabled										-- const 1
-	gui_program_row.children[6].visible = command.in_a and program_data.in_param_a == 1	-- const 1
-	gui_program_row.children[6].text = tostring(program_data.in_const_a)				-- const 1
+	gui_program_row.children[6].visible = const_a_visible								-- const 1
+	gui_program_row.children[6].text = tostring(const_a_value)							-- const 1
 	gui_program_row.children[7].enabled = enabled										-- param 2
 	gui_program_row.children[7].visible = command.in_b									-- param 2
-	gui_program_row.children[7].selected_index = program_data.in_param_b				-- param 2
+	gui_program_row.children[7].selected_index = index_b								-- param 2
 	gui_program_row.children[8].enabled = enabled										-- const 2
-	gui_program_row.children[8].visible = command.in_b and program_data.in_param_b == 1	-- const 2
-	gui_program_row.children[8].text = tostring(program_data.in_const_b)				-- const 2
+	gui_program_row.children[8].visible = const_b_visible								-- const 2
+	gui_program_row.children[8].text = tostring(const_b_value)							-- const 2
 	gui_program_row.children[9].enabled = enabled										-- output
 	gui_program_row.children[9].visible = command.out									-- output
-	gui_program_row.children[9].selected_index = program_data.out_param					-- output
+	gui_program_row.children[9].selected_index = index_o								-- output
 end
 
 
@@ -96,6 +100,7 @@ local function on_run_stop_pressed(element, gui, struct, line)
 		run_stop_button.clicked_sprite = "plc-play-button-black"
 		run_stop_label.caption = "[ Program Stopped ]"
 	else
+		struct.data.alert = nil
 		struct.data.running = true
 		run_stop_button.sprite = "plc-pause-button-white"
 		run_stop_button.hovered_sprite = "plc-pause-button-black"
@@ -121,7 +126,7 @@ local function on_run_stop_pressed(element, gui, struct, line)
 	end
 	local program_frame = gui["signal-controller-tabbed-pane"]["signal-controller-program-pane"].children[1]
 	for i = 1, #struct.program.commands do
-		update_program_line(program_frame.children[i], struct.program.commands[i], enabled, i == 1, i == #struct.program.commands)
+		update_program_line(struct, program_frame.children[i], struct.program.commands[i], enabled, i == 1, i == #struct.program.commands)
 	end
 end
 
@@ -159,12 +164,11 @@ end
 ---@param line integer
 local function del_button_pressed(element, gui, struct, line)
 	-- empty the program line
-	struct.program.commands[line] = { command = 1, in_param_a = 1, in_const_a = 0, in_param_b = 1, in_const_b = 0,
-		out_param = 1, }
+	struct.program.commands[line] = { command = program.commandList[1] }
 	-- update the gui line
 	local gui_line = element.parent
 	if gui_line ~= nil then
-		update_program_line(gui_line, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+		update_program_line(struct, gui_line, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
 	end
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
@@ -188,8 +192,8 @@ local function up_button_pressed(element, gui, struct, line)
 	-- update both lines
 	local program_frame = element.parent.parent
 	if program_frame ~= nil then
-		update_program_line(program_frame.children[line], struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
-		update_program_line(program_frame.children[line - 1], struct.program.commands[line - 1], not struct.data.running, line-1 == 1, line-1 == #struct.program.commands)
+		update_program_line(struct, program_frame.children[line], struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+		update_program_line(struct, program_frame.children[line - 1], struct.program.commands[line - 1], not struct.data.running, line-1 == 1, line-1 == #struct.program.commands)
 	end
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
@@ -213,8 +217,8 @@ local function dn_button_pressed(element, gui, struct, line)
 	-- update both lines
 	local program_frame = element.parent.parent
 	if program_frame ~= nil then
-		update_program_line(program_frame.children[line], struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
-		update_program_line(program_frame.children[line + 1], struct.program.commands[line + 1], not struct.data.running, line+1 == 1, line+1 == #struct.program.commands)
+		update_program_line(struct, program_frame.children[line], struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+		update_program_line(struct, program_frame.children[line + 1], struct.program.commands[line + 1], not struct.data.running, line+1 == 1, line+1 == #struct.program.commands)
 	end
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
@@ -228,8 +232,8 @@ end
 ---@param line integer
 local function command_changed(element, gui, struct, line)
 	local new_value = element.selected_index
-	struct.program.commands[line].command = new_value
-	update_program_line(element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+	struct.program.commands[line].command = struct.data.command_dropdown.link[new_value]
+	update_program_line(struct, element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
 	gui_parts.update_status_text(prog_status_label, struct)
@@ -242,8 +246,12 @@ end
 ---@param line integer
 local function param_1_changed(element, gui, struct, line)
 	local new_value = element.selected_index
-	struct.program.commands[line].in_param_a = new_value
-	update_program_line(element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+	if new_value == 2 then -- new constant parameter
+		struct.program.commands[line].in_param_a = { type = "constant", value = 0}
+	else
+		struct.program.commands[line].in_param_a = struct.data.input_dropdown.link[new_value]
+	end
+	update_program_line(struct, element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
 	gui_parts.update_status_text(prog_status_label, struct)
@@ -256,8 +264,10 @@ end
 ---@param line integer
 local function const_1_changed(element, gui, struct, line)
 	local new_value = tonumber(element.text)
-	struct.program.commands[line].in_const_a = new_value or 0
-	update_program_line(element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+	if struct.program.commands[line].in_param_a.type == "constant" then
+		struct.program.commands[line].in_param_a.value = new_value or 0
+	end
+	update_program_line(struct, element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
 	gui_parts.update_status_text(prog_status_label, struct)
@@ -270,8 +280,12 @@ end
 ---@param line integer
 local function param_2_changed(element, gui, struct, line)
 	local new_value = element.selected_index
-	struct.program.commands[line].in_param_b = new_value
-	update_program_line(element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+	if new_value == 2 then -- new constant parameter
+		struct.program.commands[line].in_param_b = { type = "constant", value = 0}
+	else
+		struct.program.commands[line].in_param_b = struct.data.input_dropdown.link[new_value]
+	end
+	update_program_line(struct, element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
 	gui_parts.update_status_text(prog_status_label, struct)
@@ -284,8 +298,10 @@ end
 ---@param line integer
 local function const_2_changed(element, gui, struct, line)
 	local new_value = tonumber(element.text)
-	struct.program.commands[line].in_const_b = new_value or 0
-	update_program_line(element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+	if struct.program.commands[line].in_param_b.type == "constant" then
+		struct.program.commands[line].in_param_b.value = new_value or 0
+	end
+	update_program_line(struct, element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
 	gui_parts.update_status_text(prog_status_label, struct)
@@ -298,8 +314,8 @@ end
 ---@param line integer
 local function param_3_changed(element, gui, struct, line)
 	local new_value = element.selected_index
-	struct.program.commands[line].out_param = new_value
-	update_program_line(element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
+	struct.program.commands[line].out_param = struct.data.output_dropdown.link[new_value]
+	update_program_line(struct, element.parent, struct.program.commands[line], not struct.data.running, line == 1, line == #struct.program.commands)
 	local prog_status_label = gui["signal-controller-run-frame"]["signal-controller-program-status"]
 	program.check_program(struct) -- update the program status
 	gui_parts.update_status_text(prog_status_label, struct)
@@ -309,13 +325,12 @@ end
 ---@param frame LuaGuiElement
 ---@param struct PlcData
 function programPage(frame, struct)
-	local command_list = {}
-	for ind, command in pairs(program.commandList) do command_list[ind] = command.disp end
 	-- program information
 	local running = struct.data.running
 	local count = #struct.program.commands
 	local prog = struct.program.commands
 	local unit_number = struct.entities.main.unit_number
+	structure.fill_prog_list(struct)
 	update_param_lists(struct)
 	if unit_number == nil then
 		return
@@ -326,22 +341,27 @@ function programPage(frame, struct)
 	for line = 1, count do -- process the program
 		prog[line] = prog[line] or { cmd = 1, params = {} }
 		local code = prog[line]
-		local command = program.commandList[code.command]
-		code.in_param_a = code.in_param_a or 1
-		code.in_param_b = code.in_param_b or 1
-		code.out_param = code.out_param or 1
-		code.in_const_a = code.in_const_a or 0
-		code.in_const_b = code.in_const_b or 0
+		local command = code.command
+		-- get dropdown indexes
+		local index_cmd = dropdown_index_of_cmd(struct.data.command_dropdown.link, code.command)
+		local index_a = dropdown_index_of(struct.data.input_dropdown.link, code.in_param_a)
+		local index_b = dropdown_index_of(struct.data.input_dropdown.link, code.in_param_b)
+		local index_o = dropdown_index_of(struct.data.output_dropdown.link, code.out_param)
+		local const_a_visible = command.in_a and code.in_param_a ~= nil and code.in_param_a.type == "constant"
+		local const_b_visible = command.in_b and code.in_param_b ~= nil and code.in_param_b.type == "constant"
+		local const_a_value = code.in_param_a ~= nil and code.in_param_a.value or 0
+		local const_b_value = code.in_param_b ~= nil and code.in_param_b.value or 0
+
 		local line_frame = gui_parts.add_row(frame, "program", line)
 		local del_button = gui_parts.add_del_button(line_frame, line, unit_number, not running, register_callback(struct, del_button_pressed))
 		local up_button = gui_parts.add_up_button(line_frame, line, unit_number, line ~= 1 and not running, register_callback(struct, up_button_pressed))
 		local down_button = gui_parts.add_down_button(line_frame, line, unit_number, line ~= count and not running, register_callback(struct, dn_button_pressed))
-		local cmd_dropdown = gui_parts.add_command_dropdown(line_frame, line, unit_number, not running, code.command, command_list, register_callback(struct, command_changed))
-		local cmd_param1 = gui_parts.add_command_parameter(line_frame, line, unit_number, 1, not running, command.in_a, code.in_param_a, struct.program.input_list, register_callback(struct, param_1_changed))
-		local cmd_const1 = gui_parts.add_command_const(line_frame, line, unit_number, 1, not running, command.in_a and code.in_param_a == 1, code.in_const_a, register_callback(struct, const_1_changed))
-		local cmd_param2 = gui_parts.add_command_parameter(line_frame, line, unit_number, 2, not running, command.in_b, code.in_param_b, struct.program.input_list, register_callback(struct, param_2_changed))
-		local cmd_const2 = gui_parts.add_command_const(line_frame, line, unit_number, 2, not running, command.in_b and code.in_param_b == 1, code.in_const_b, register_callback(struct, const_2_changed))
-		local cmd_param3 = gui_parts.add_command_parameter(line_frame, line, unit_number, 3, not running, command.out, code.out_param, struct.program.output_list, register_callback(struct, param_3_changed))
+		local cmd_dropdown = gui_parts.add_command_dropdown(line_frame, line, unit_number, not running, index_cmd, struct.data.command_dropdown.strings, register_callback(struct, command_changed))
+		local cmd_param1 = gui_parts.add_command_parameter(line_frame, line, unit_number, 1, not running, command.in_a, index_a, struct.data.input_dropdown.strings, register_callback(struct, param_1_changed))
+		local cmd_const1 = gui_parts.add_command_const(line_frame, line, unit_number, 1, not running, const_a_visible, const_a_value, register_callback(struct, const_1_changed))
+		local cmd_param2 = gui_parts.add_command_parameter(line_frame, line, unit_number, 2, not running, command.in_b, index_b, struct.data.input_dropdown.strings, register_callback(struct, param_2_changed))
+		local cmd_const2 = gui_parts.add_command_const(line_frame, line, unit_number, 2, not running, const_b_visible, const_b_value, register_callback(struct, const_2_changed))
+		local cmd_param3 = gui_parts.add_command_parameter(line_frame, line, unit_number, 3, not running, command.out, index_o, struct.data.output_dropdown.strings, register_callback(struct, param_3_changed))
 
 	end
 end
@@ -479,18 +499,51 @@ function variablePage(frame, struct)
 	end
 end
 
+---Create live values page
+---@param frame LuaGuiElement
+---@param struct PlcData
+function livePage(frame, struct)
+	struct.data.live_page = frame
+	for _, entry in ipairs(struct.program.inputs) do
+		if entry.type == "input" and entry.name ~= "" then
+			local label = gui_parts.add_label(frame, "Input [" .. entry.name .. "] = " .. tostring(entry.value))
+		end
+	end
+	for _, entry in ipairs(struct.program.outputs) do
+		if entry.type == "output" and entry.name ~= "" then
+			local label = gui_parts.add_label(frame, "Output [" .. entry.name .. "] = " .. tostring(entry.value))
+		end
+	end
+	for _, entry in ipairs(struct.program.variables) do
+		if entry.type == "variable" and entry.name ~= "" then
+			local label = gui_parts.add_label(frame, "Variable [" .. entry.name .. "] = " .. tostring(entry.value))
+		end
+	end
+end
+
+---Update live values page
+---@param struct PlcData
+function livePageUpdate(struct)
+	if struct.data.live_page == nil or not struct.data.live_page.valid then
+		return
+	end
+	local frame = struct.data.live_page
+	frame.clear()
+	livePage(frame, struct)
+end
+
 ---Update the dropdown info for all commands
 ---@param struct PlcData
 ---@param program_pane LuaGuiElement
 local function update_dropdown_values(struct, program_pane)
-	for line, cmd in ipairs(struct.program.commands) do
+	for line, code in ipairs(struct.program.commands) do
 		local row = program_pane.children[1].children[line]
-		row.children[5].items = struct.program.input_list
-		row.children[5].selected_index = cmd.in_param_a or 1
-		row.children[7].items = struct.program.input_list
-		row.children[7].selected_index = cmd.in_param_b or 1
-		row.children[9].items = struct.program.output_list
-		row.children[9].selected_index = cmd.out_param or 1
+		row.children[5].items = struct.data.input_dropdown.strings
+		row.children[5].selected_index = dropdown_index_of(struct.data.input_dropdown.link, code.in_param_a)
+		row.children[7].items = struct.data.input_dropdown.strings
+		row.children[7].selected_index = dropdown_index_of(struct.data.input_dropdown.link, code.in_param_b)
+		row.children[9].items = struct.data.output_dropdown.strings
+		row.children[9].selected_index = dropdown_index_of(struct.data.output_dropdown.link, code.out_param)
 	end
 end
 
@@ -514,8 +567,16 @@ end
 --- Events
 ---================================================================================================
 
+local valid_events = {
+	["sprite-button"] = defines.events.on_gui_click,
+	["drop-down"] = defines.events.on_gui_selection_state_changed,
+	["textfield"] = defines.events.on_gui_text_changed,
+	["tabbed-pane"] = defines.events.on_gui_selected_tab_changed,
+	["switch"] = defines.events.on_gui_click,
+	["choose-elem-button"] = defines.events.on_gui_elem_changed,
+}
 ---A GUI Item changed/clicked
----@param event EventData.on_gui_click
+---@param event EventData.on_gui_click|EventData.on_gui_elem_changed|EventData.on_gui_text_changed
 function M.on_gui_interaction(event)
 	-- minimum stuff check
 	if not event or not event.element or not event.element.name or not event.player_index then
@@ -542,10 +603,14 @@ function M.on_gui_interaction(event)
 	end
 	local gui = player.gui.screen["signal-controller-outer-frame"]
 	local struct = structure.get_structure(unit_number)
-	if gui and struct and callback_index then
+	local do_event = event.name == valid_events[element.type]
+	if not do_event then
+		return
+	end
+	if do_event and gui ~= nil and struct ~= nil and callback_index ~= nil then
 		callback = get_callback(struct, callback_index)
 		if callback ~= nil then
-			callback(element, gui, struct, line)
+			callback(element, gui, struct, line, event.name)
 		end
 		return
 	end
@@ -565,6 +630,9 @@ function M.on_gui_closed(event)
 		if event and event.element and event.element.name then
 			if event.element.name == "signal-controller-outer-frame" then
 				event.element.destroy()
+				for i, struct in ipairs(structure.get_all_structures()) do
+					struct.data.live_page = nil
+				end
 			end
 		end
 	end
@@ -603,6 +671,8 @@ function M.on_gui_opened(event)
 			local inputs_tab = gui_parts.add_tab(tabbed_pane, "Inputs", inputPage, struct)
 			-- add the outputs panel
 			local outputs_tab = gui_parts.add_tab(tabbed_pane, "Outputs", outputPage, struct)
+			-- add the live values panel
+			local live_tab = gui_parts.add_tab(tabbed_pane, "Live", livePage, struct)
 			-- make the gui active
 			player.opened = main_frame
 		end

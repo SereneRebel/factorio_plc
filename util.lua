@@ -2,6 +2,47 @@
 require "intellisense"
 
 
+---Find the index of value within the list
+---@param list PlcParameter[]
+---@param value PlcParameter|nil
+---@return integer
+function dropdown_index_of(list, value)
+	if value == nil then
+		return 1
+	end
+	if value.type == "constant" then
+		return 2
+	end
+	for i, v in ipairs(list) do
+		if v.name == value.name then
+			return i
+		end
+	end
+	return 1
+end
+---Find the index of command within the list
+---@param list PlcCommand[]
+---@param value PlcCommand|nil
+---@return integer
+function dropdown_index_of_cmd(list, value)
+	if value == nil then
+		return 1
+	end
+	for i, v in ipairs(list) do
+		if v.disp == value.disp then
+			return i
+		end
+	end
+	return 1
+end
+
+---Signal an alert
+---@param entity LuaEntity
+---@param msg string
+---@param player LuaPlayer
+function create_alert(entity, msg, player)
+	player.add_custom_alert(entity, {type="virtual", name="signal-info"}, msg, true)
+end
 
 
 

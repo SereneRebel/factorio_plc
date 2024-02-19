@@ -153,6 +153,7 @@ function M.add_tab(parent, tab_name, content_func, struct)
 		type = "frame",
 		style = "entity_frame",
 		direction = "vertical",
+		name = "signal-controller-"..tab_name:lower().."-frame",
 	}
 	frame.style.vertically_stretchable = true
 	content_func(frame, struct)
